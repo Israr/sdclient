@@ -6,12 +6,12 @@ Scrapes the Slickdeals.net frontpage for "Hot Deals" (deals marked with the
 flame/fire icon) and prints out the free & cheap ones in a formatted table.
 
 Requirements:
-    pip install requests beautifulsoup4 tabulate
+    uv sync
 
 Usage:
-    python slickdeals_hot_deals.py                # default: show deals <= $15 or Free
-    python slickdeals_hot_deals.py --max-price 25  # custom price threshold
-    python slickdeals_hot_deals.py --all-hot       # show ALL hot deals (no price filter)
+    uv run main.py                # default: show deals <= $15 or Free
+    uv run main.py --max-price 25 # custom price threshold
+    uv run main.py --all-hot      # show ALL hot deals (no price filter)
 """
 
 import argparse
@@ -133,8 +133,8 @@ def print_table(deals, headers=("Title", "Price", "Original Price", "Link")):
     rows = [
         [
             wrap(d["title"], title_w),
-            d["price"] or "-",
-            d["original_price"] or "-",
+            wrap(d["price"] or "-", price_w),
+            wrap(d["original_price"] or "-", orig_w),
             wrap(d["link"], link_w),
         ]
         for d in deals
