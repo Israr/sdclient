@@ -120,12 +120,14 @@ def scrape_hot_deals(html: str):
 def print_table(deals, headers=("Title", "Price", "Original Price", "Link")):
     term_width = shutil.get_terminal_size(fallback=(100, 20)).columns
 
-    # Fixed-width columns, everything else goes to Title/Link.
+    # Fixed-width columns; split remaining space between Title and Link.
     price_w, orig_w = 8, 14
+    title_max = 35
+    link_min = 30
     borders = 3 * 3 + 4  # " | " between 4 cols, plus outer padding
     remaining = max(term_width - price_w - orig_w - borders, 30)
-    link_w = min(40, remaining // 3)
-    title_w = max(remaining - link_w, 20)
+    link_w = max(link_min, remaining - title_max)
+    title_w = remaining - link_w
 
     def wrap(text, width):
         return "\n".join(textwrap.wrap(str(text), width=width)) or ""
