@@ -11,21 +11,23 @@ select_most_commented = deals.select_most_commented
 
 
 def deal_card(title, comments=None, *, hot=False, link="/deal"):
-    fire_icon = '<span class="dealCard__fireIcon"></span>' if hot else ""
+    fire_icon = (
+        '<span class="dealCardGridV2__fireIcon"></span>' if hot else ""
+    )
     comments_count = (
-        f'<span class="dealCardSocialControls__commentsCount">{comments}</span>'
+        f'<span class="dealCardComments__count">{comments}</span>'
         if comments is not None
         else ""
     )
     return f"""
-        <div class="dealCard">
-            <div class="dealCard__content">
-                {fire_icon}
-                <a href="{link}"><span class="dealCard__title">{title}</span></a>
-                <span class="dealCard__price">$10</span>
-                <span class="dealCard__originalPrice">$20</span>
-            </div>
-            <footer class="dealCard__footer">{comments_count}</footer>
+        <div class="dealCardGridV2">
+            {fire_icon}
+            <a class="dealCardGridV2__title" href="{link}">{title}</a>
+            <a class="dealCardGridV2__priceRow" href="{link}">
+                <span class="dealCardGridV2__finalPrice">$10</span>
+                <span class="dealCardGridV2__listPrice">$20</span>
+            </a>
+            <div class="dealCardGridV2__actions">{comments_count}</div>
         </div>
     """
 

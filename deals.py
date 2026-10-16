@@ -83,12 +83,12 @@ def scrape_deals(html: str):
     deals = []
     seen_titles = set()
 
-    for card in soup.select(".dealCard"):
-        title_el = card.select_one(".dealCard__title")
-        price_el = card.select_one(".dealCard__price")
-        orig_price_el = card.select_one(".dealCard__originalPrice")
-        comments_el = card.select_one(".dealCardSocialControls__commentsCount")
-        link_el = card.select_one("a[href]")
+    for card in soup.select(".dealCardGridV2"):
+        title_el = card.select_one(".dealCardGridV2__title")
+        price_el = card.select_one(".dealCardGridV2__finalPrice")
+        orig_price_el = card.select_one(".dealCardGridV2__listPrice")
+        comments_el = card.select_one(".dealCardComments__count")
+        link_el = title_el
 
         title = title_el.get_text(strip=True) if title_el else "N/A"
         price = price_el.get_text(strip=True) if price_el else ""
@@ -96,7 +96,7 @@ def scrape_deals(html: str):
         comments_text = comments_el.get_text(strip=True) if comments_el else ""
         comments_digits = re.sub(r"[^\d]", "", comments_text)
         comments = int(comments_digits) if comments_digits else 0
-        link = link_el["href"] if link_el else ""
+        link = link_el.get("href", "") if link_el else ""
         if link and link.startswith("/"):
             link = "https://slickdeals.net" + link
 
@@ -110,7 +110,7 @@ def scrape_deals(html: str):
             "original_price": orig_price,
             "link": link,
             "comments": comments,
-            "is_hot": card.select_one(".dealCard__fireIcon") is not None,
+            "is_hot": card.select_one(".dealCardGridV2__fireIcon") is not None,
         })
 
     return deals
