@@ -1,0 +1,15 @@
+# Keyword profiles for `uv run deals.py --keyword-mode --profile <name>`.
+# A deal is printed if its title contains ANY keyword (case-insensitive).
+profiles:
+  home:
+    - vacuum
+    - mattress
+    - air fryer
+    - cookware
+    - sheets
+  tech:
+    - laptop
+    - ssd
+    - monitor
+    - headphones
+    - router

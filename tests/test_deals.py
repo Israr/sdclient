@@ -132,3 +132,39 @@ class CliTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class KeywordModeTests(unittest.TestCase):
+    def write_config(self, text):
+        import tempfile
+        from pathlib import Path
+
+        tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(tmp.cleanup)
+        path = Path(tmp.name) / "keywords.yaml"
+        path.write_text(text)
+        return str(path)
+
+    def test_load_keywords_returns_profile_list(self):
+        path = self.write_config("profiles:\n  home: [vacuum, ' ']\n")
+        self.assertEqual(deals.load_keywords(path, "home"), ["vacuum"])
+
+    def test_load_keywords_unknown_profile_lists_available(self):
+        path = self.write_config("profiles:\n  home: [a]\n  tech: [b]\n")
+        with self.assertRaisesRegex(ValueError, "available: home, tech"):
+            deals.load_keywords(path, "nope")
+
+    def test_load_keywords_missing_file(self):
+        with self.assertRaises(ValueError):
+            deals.load_keywords("/nonexistent/keywords.yaml", "home")
+
+    def test_filter_by_keywords_matches_any_case_insensitive(self):
+        items = [
+            {"title": "Dyson VACUUM"},
+            {"title": "Gaming Laptop"},
+            {"title": "Socks"},
+        ]
+        result = deals.filter_by_keywords(items, ["vacuum", "laptop"])
+        self.assertEqual(
+            [d["title"] for d in result], ["Dyson VACUUM", "Gaming Laptop"]
+        )

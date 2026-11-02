@@ -14,6 +14,8 @@ Usage:
     uv run deals.py --all-hot        # show ALL hot deals (no price filter)
     uv run deals.py --most-commented # show homepage deals with > 5 comments
     uv run deals.py --query laptop   # filter deals by title
+    uv run deals.py --keyword-mode --profile home
+                                     # deals matching a keywords.yaml profile
 """
 
 import argparse
@@ -21,8 +23,10 @@ import re
 import shutil
 import sys
 import textwrap
+from pathlib import Path
 
 import requests
+import yaml
 from bs4 import BeautifulSoup
 
 try:
@@ -32,6 +36,7 @@ except ImportError:
     HAVE_TABULATE = False
 
 URL = "https://slickdeals.net/"
+DEFAULT_CONFIG = Path(__file__).with_name("keywords.yaml")
 HEADERS = {
     "User-Agent": (
         "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
@@ -141,6 +146,53 @@ def filter_by_query(deals, query):
     ]
 
 
+def load_keywords(path, profile):
+    """
+    Read the keyword list for `profile` from a YAML config like:
+
+        profiles:
+          home: [vacuum, mattress]
+          tech: [laptop, ssd]
+
+    Raises ValueError with a readable message on any config problem.
+    """
+    try:
+        with open(path, encoding="utf-8") as f:
+            config = yaml.safe_load(f)
+    except OSError as exc:
+        raise ValueError(f"cannot read config {path}: {exc}") from exc
+    except yaml.YAMLError as exc:
+        raise ValueError(f"invalid YAML in {path}: {exc}") from exc
+
+    profiles = config.get("profiles") if isinstance(config, dict) else None
+    if not isinstance(profiles, dict):
+        raise ValueError(f"{path}: missing top-level 'profiles' mapping")
+    if profile not in profiles:
+        available = ", ".join(sorted(map(str, profiles))) or "none"
+        raise ValueError(
+            f"profile '{profile}' not found in {path} "
+            f"(available: {available})"
+        )
+
+    keywords = profiles[profile]
+    if not isinstance(keywords, list):
+        raise ValueError(f"profile '{profile}' must be a list of keywords")
+    # Drop blanks so an empty string can't match every deal.
+    cleaned = [str(k).strip() for k in keywords if str(k).strip()]
+    if not cleaned:
+        raise ValueError(f"profile '{profile}' has no keywords")
+    return cleaned
+
+
+def filter_by_keywords(deals, keywords):
+    """Return deals whose title contains any keyword, ignoring case."""
+    folded = [k.casefold() for k in keywords]
+    return [
+        deal for deal in deals
+        if any(k in deal["title"].casefold() for k in folded)
+    ]
+
+
 def print_table(deals, headers=None, include_comments=False):
     if headers is None:
         headers = (
@@ -214,6 +266,15 @@ def build_parser():
         "--query", default="",
         help="Only show deals whose title contains this text (case-insensitive).",
     )
+    parser.add_argument(
+        "--profile", default=None,
+        help="Keyword profile name from the config (needs --keyword-mode).",
+    )
+    parser.add_argument(
+        "--config", default=str(DEFAULT_CONFIG),
+        help="YAML keyword config file. Default: keywords.yaml next to "
+             "this script.",
+    )
     mode = parser.add_mutually_exclusive_group()
     mode.add_argument(
         "--all-hot", action="store_true",
@@ -223,17 +284,37 @@ def build_parser():
         "--most-commented", action="store_true",
         help="Show homepage deals with more than 5 comments.",
     )
+    mode.add_argument(
+        "--keyword-mode", action="store_true",
+        help="Show homepage deals matching any keyword in --profile.",
+    )
     return parser
 
 
 def main():
-    args = build_parser().parse_args()
+    parser = build_parser()
+    args = parser.parse_args()
+
+    keywords = []
+    if args.keyword_mode:
+        if not args.profile:
+            parser.error("--keyword-mode requires --profile")
+        try:
+            keywords = load_keywords(args.config, args.profile)
+        except ValueError as exc:
+            parser.error(str(exc))
+    elif args.profile:
+        parser.error("--profile requires --keyword-mode")
 
     print(f"Fetching {URL} ...", file=sys.stderr)
     html = fetch_html(URL)
 
     all_deals = scrape_deals(html)
-    if args.most_commented:
+    if args.keyword_mode:
+        selected = filter_by_keywords(all_deals, keywords)
+        title = f"Keyword Matches: profile '{args.profile}'"
+        print(f"Found {len(all_deals)} homepage deals total.\n", file=sys.stderr)
+    elif args.most_commented:
         selected = select_most_commented(all_deals)
         title = "Most-Commented Homepage Deals (> 5 comments)"
         print(f"Found {len(all_deals)} homepage deals total.\n", file=sys.stderr)
@@ -244,7 +325,7 @@ def main():
     if args.all_hot:
         selected = all_hot_deals
         title = "ALL Hot Deals (flame icon)"
-    elif not args.most_commented:
+    elif not (args.most_commented or args.keyword_mode):
         selected = [d for d in all_hot_deals if is_cheap_or_free(d["price"], args.max_price)]
         title = f"Free & Cheap Hot Deals (<= ${args.max_price:.2f} or Free)"
 
