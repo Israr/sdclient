@@ -2,14 +2,8 @@
 # A deal is printed if its title contains ANY keyword (case-insensitive).
 profiles:
   home:
-    - vacuum
+    - smoke
     - mattress
-    - air fryer
-    - cookware
-    - sheets
   tech:
-    - laptop
-    - ssd
-    - monitor
-    - headphones
-    - router
+    - roku
+    - ipad
