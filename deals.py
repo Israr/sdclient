@@ -185,12 +185,23 @@ def load_keywords(path, profile):
 
 
 def filter_by_keywords(deals, keywords):
-    """Return deals whose title contains any keyword, ignoring case."""
+    """
+    Return deals whose title contains any keyword, ignoring case.
+
+    The special keyword "free" also matches on price, so deals priced
+    Free are caught even when "free" isn't in the title.
+    """
     folded = [k.casefold() for k in keywords]
-    return [
-        deal for deal in deals
-        if any(k in deal["title"].casefold() for k in folded)
-    ]
+    match_free = "free" in folded
+
+    def is_match(deal):
+        title = deal["title"].casefold()
+        if any(k in title for k in folded):
+            return True
+        # Price-based match for the "free" keyword.
+        return match_free and "free" in (deal.get("price") or "").lower()
+
+    return [deal for deal in deals if is_match(deal)]
 
 
 def print_table(deals, headers=None, include_comments=False):

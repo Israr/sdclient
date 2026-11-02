@@ -4,6 +4,7 @@ profiles:
   home:
     - smoke
     - mattress
+    - free
   tech:
     - roku
     - ipad

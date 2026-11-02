@@ -168,3 +168,15 @@ class KeywordModeTests(unittest.TestCase):
         self.assertEqual(
             [d["title"] for d in result], ["Dyson VACUUM", "Gaming Laptop"]
         )
+
+    def test_free_keyword_matches_free_price(self):
+        items = [
+            {"title": "Cool Gadget", "price": "Free"},
+            {"title": "Other Gadget", "price": "$20"},
+        ]
+        result = deals.filter_by_keywords(items, ["free"])
+        self.assertEqual([d["title"] for d in result], ["Cool Gadget"])
+
+    def test_free_price_ignored_without_free_keyword(self):
+        items = [{"title": "Cool Gadget", "price": "Free"}]
+        self.assertEqual(deals.filter_by_keywords(items, ["vacuum"]), [])
